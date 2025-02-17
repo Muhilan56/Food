@@ -7,5 +7,4 @@ itsdangerous
 click
 MarkupSafe
 WTForms
-sqlite3
 gunicorn
