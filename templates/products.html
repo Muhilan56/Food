@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Foods</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* Inline CSS for styling */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(45deg, #f06, #48c9b0, #ff6347, #4682b4);
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+            padding-top: 30px;
+        }
+
+        /* Gradient animation */
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            25% { background-position: 50% 50%; }
+            50% { background-position: 100% 50%; }
+            75% { background-position: 50% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: #575757;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 30px;
+        }
+
+        .product-card {
+            border: 1px solid #787879;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 200px; /* Fixed height to keep all images uniform */
+            object-fit: cover; /* Ensures images cover the area without distortion */
+            border-radius: 8px;
+        }
+
+        .product-card .product-name {
+            font-size: 1.2em;
+            color: #343a40;
+            margin-top: 15px;
+        }
+
+        .product-card .product-price {
+            color: #28a745;
+            font-size: 1.5em;
+            margin: 15px 0;
+        }
+
+        .product-card .product-details {
+            font-size: 1em;
+            color: #6c757d;
+        }
+
+        .form-inline {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .form-inline input, .form-inline button {
+            margin: 0 10px;
+        }
+
+        .btn-budget {
+            background-color: #28a745;
+            border-color: #28a745;
+            padding: 10px;
+            color: rgb(224, 224, 224);
+            font-size: 1.2em;
+            width: 30%;
+        }
+
+        .btn-budget:disabled {
+            background-color: #6c757d;
+        }
+
+        .product-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .total-cost {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 20px;
+            color: #333;
+            text-align: center;
+        }
+
+        .budget-alert {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2> Products</h2>
+
+        <!-- Budget Input and Calculate Button -->
+        <div class="form-inline">
+            <label for="budget" class="h4">     .</label>
+            <input type="number" name="budget" id="budget" class="form-control" placeholder="Enter amount" required>
+            <button type="button" class="btn btn-budget" id="calculate-budget" disabled>Calculate</button>
+        </div>
+
+        <!-- Budget Alert if Over Budget -->
+        <div id="budget-alert" class="budget-alert" style="display: none;">Total exceeds budget. Please adjust your quantity or budget.</div>
+
+        <!-- Product List -->
+        <div class="product-list">
+            {% for product in products %}
+            <div class="col-md-3 product-card" data-price="{{ product[4] }}">
+                <img src="{{ product[2] }}" alt="{{ product[1] }}">
+                <div class="product-name">{{ product[1] }}</div>
+                <div class="product-price">₹{{ product[4] }}</div>
+                <div class="product-details">{{ product[6] }}</div>
+                <form action="{{ url_for('buy_product', product_id=product[0]) }}" method="POST" class="buy-form">
+                    <input type="number" name="quantity" id="quantity-{{ product[0] }}" min="1" max="{{ product[3] }}" value="1" required>
+                    <button type="submit" class="btn btn-primary mt-3">Buy</button>
+                    <span id="total-{{ product[0] }}" class="total-price mt-2">Total: ₹{{ product[4] }}</span>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Selected Products and Total -->
+        {% if selected_products %}
+        <h3 class="total-cost">Selected Products:</h3>
+        <ul class="product-list">
+            {% for product in selected_products %}
+            <li>{{ product[1] }} - ₹{{ product[4] }} x {{ product.quantity }}</li>
+            {% endfor %}
+        </ul>
+
+        <h3 class="total-cost">Total: ₹{{ total }}</h3>
+
+        <form method="POST" action="{{ url_for('payment') }}">
+            <button type="submit" class="btn btn-primary">Proceed to Payment</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS (for animations) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Function to update total price based on quantity entered
+        const updateTotalPrice = (productId, price) => {
+            const quantityInput = document.getElementById(`quantity-${productId}`);
+            const totalPriceElement = document.getElementById(`total-${productId}`);
+
+            const quantity = quantityInput.value;
+            const totalPrice = price * quantity;
+
+            totalPriceElement.textContent = `Total: ₹${totalPrice}`;
+        };
+
+        // Event listeners to update the total price when quantity changes
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const productId = e.target.id.split('-')[1];
+                const price = parseFloat(e.target.closest('.product-card').querySelector('.product-price').textContent.replace('₹', ''));
+                updateTotalPrice(productId, price);
+            });
+        });
+
+        // Budget Calculation logic
+        const calculateButton = document.getElementById('calculate-budget');
+        const budgetInput = document.getElementById('budget');
+        const budgetAlert = document.getElementById('budget-alert');
+        const totalElement = document.querySelector('.total-cost');
+
+        calculateButton.addEventListener('click', () => {
+            const budget = parseFloat(budgetInput.value);
+            let totalCost = 0;
+            const selectedProducts = [];
+
+            // Loop through each product to check if it's within budget
+            document.querySelectorAll('.product-card').forEach(card => {
+                const productPrice = parseFloat(card.getAttribute('data-price'));
+                const quantityInput = card.querySelector('input[type="number"]');
+                const quantity = parseInt(quantityInput.value, 10);
+                const totalProductPrice = productPrice * quantity;
+
+                if (totalProductPrice <= budget) {
+                    card.style.display = ''; // Show the product
+                    totalCost += totalProductPrice;
+                    selectedProducts.push({ product: card, totalPrice: totalProductPrice });
+                } else {
+                    card.style.display = 'none'; // Hide the product
+                }
+            });
+
+            // Update the total cost display and budget alert
+            if (totalCost > budget) {
+                budgetAlert.style.display = 'block';
+                calculateButton.disabled = true;
+            } else {
+                budgetAlert.style.display = 'none';
+                calculateButton.disabled = false;
+            }
+
+            // Show the total cost
+            totalElement.textContent = `Total: ₹${totalCost.toFixed(2)}`;
+        });
+
+        // Enable the calculate button when the budget input is filled
+        budgetInput.addEventListener('input', () => {
+            calculateButton.disabled = budgetInput.value === '';
+        });
+    </script>
+</body>
+</html>
